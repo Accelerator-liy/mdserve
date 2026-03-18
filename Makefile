@@ -1,4 +1,4 @@
-.PHONY: all build build-frontend build-backend clean install run test
+.PHONY: all build build-frontend build-backend clean install deps run test
 
 # Default target
 all: build
@@ -19,12 +19,19 @@ build-backend:
 	@echo "Backend built successfully!"
 
 # Install frontend dependencies
-install-frontend:
+deps-frontend:
 	cd web && npm install
 
 # Install all dependencies
-install: install-frontend
+deps: deps-frontend
 	go mod download
+
+# Install binary to ~/.local/bin
+install: build
+	@echo "Installing mdserve to ~/.local/bin..."
+	@mkdir -p ~/.local/bin
+	@cp bin/mdserve ~/.local/bin/
+	@echo "Installation complete! Make sure ~/.local/bin is in your PATH."
 
 # Run in development mode (with hot reload)
 dev:
