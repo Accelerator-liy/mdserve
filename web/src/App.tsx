@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { Menu, List, ChevronLeft, ChevronRight, Tags, Search } from 'lucide-react'
 import { FileTree } from './components/FileTree'
 import { MarkdownViewer } from './components/MarkdownViewer'
@@ -6,136 +5,62 @@ import { Outline } from './components/Outline'
 import { ThemeToggle } from './components/ThemeToggle'
 import { TagsModal } from './components/TagsModal'
 import { DocumentInfo } from './components/DocumentInfo'
-import { NavigationMenu } from './components/NavigationMenu'
+import { NavigationMenuWrapper } from './components/NavigationMenu'
 import { SearchModal } from './components/SearchModal'
 import { Button } from './components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './components/ui/sheet'
-import { useWebSocket } from './hooks/useWebSocket'
-import { useTheme } from './hooks/useTheme'
-import { FileInfo, OutlineItem, MenuItem } from './types'
+import { FileProvider, UIProvider, useFile, useUI } from './contexts'
 
-function App() {
-  const [files, setFiles] = useState<FileInfo[]>([])
-  const [currentFile, setCurrentFile] = useState<string | null>(null)
-  const [content, setContent] = useState<string>('')
-  const [outline, setOutline] = useState<OutlineItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [tags, setTags] = useState<string[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  
-  // 全局标签和分类数据
-  const [allTags, setAllTags] = useState<Record<string, string[]>>({})
-  const [allCategories, setAllCategories] = useState<Record<string, string[]>>({})
-  
-  // 菜单数据
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
-  
-  // 桌面端折叠状态
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [outlineCollapsed, setOutlineCollapsed] = useState(false)
-  
-  // 移动端抽屉状态
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  
-  // Tags modal 状态
-  const [tagsModalOpen, setTagsModalOpen] = useState(false)
-  const [tagsModalTab, setTagsModalTab] = useState<'tags' | 'categories' | undefined>(undefined)
-  const [tagsModalSelected, setTagsModalSelected] = useState<string | undefined>(undefined)
-  
-  const { theme, toggleTheme } = useTheme()
-  const wsMessage = useWebSocket('/ws')
+function AppContent() {
+  const {
+    files,
+    currentFile,
+    content,
+    outline,
+    loading,
+    tags,
+    categories,
+    allTags,
+    allCategories,
+    menuItems,
+    handleFileSelect: baseHandleFileSelect,
+    handleOutlineChange,
+  } = useFile()
 
-  // 全局快捷键 Ctrl/Cmd+K 打开搜索
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setMobileSearchOpen(true)
-      }
-    }
-    
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [])
+  const {
+    sidebarCollapsed,
+    outlineCollapsed,
+    mobileMenuOpen,
+    mobileOutlineOpen,
+    mobileSearchOpen,
+    tagsModalOpen,
+    tagsModalTab,
+    tagsModalSelected,
+    setSidebarCollapsed,
+    setOutlineCollapsed,
+    setMobileMenuOpen,
+    setMobileOutlineOpen,
+    setMobileSearchOpen,
+    setTagsModalOpen,
+    openTagsModal,
+  } = useUI()
 
-  // 加载文件树
-  useEffect(() => {
-    fetch('/api/files')
-      .then(res => res.json())
-      .then(data => setFiles(data.files || []))
-      .catch(console.error)
-  }, [])
-
-  // 加载全局标签和分类
-  useEffect(() => {
-    fetch('/api/tags')
-      .then(res => res.json())
-      .then(data => {
-        setAllTags(data.tags || {})
-        setAllCategories(data.categories || {})
-      })
-      .catch(console.error)
-  }, [])
-
-  // 加载菜单
-  useEffect(() => {
-    fetch('/api/menu')
-      .then(res => res.json())
-      .then(data => setMenuItems(data.menu || []))
-      .catch(console.error)
-  }, [])
-
-  // WebSocket 消息处理 - 实时刷新
-  useEffect(() => {
-    if (wsMessage && currentFile) {
-      const msg = JSON.parse(wsMessage)
-      if (msg.type === 'reload' && msg.path === currentFile) {
-        loadFile(currentFile)
-      }
-    }
-  }, [wsMessage, currentFile])
-
-  const loadFile = async (path: string) => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`)
-      const data = await res.json()
-      setContent(data.content || '')
-      setOutline(data.outline || [])
-      setTags(data.tags || [])
-      setCategories(data.categories || [])
-      setCurrentFile(path)
-      // 移动端加载文件后关闭抽屉
-      setMobileMenuOpen(false)
-    } catch (error) {
-      console.error('Failed to load file:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // 包装 handleFileSelect，加载文件后关闭移动端菜单
   const handleFileSelect = (path: string) => {
-    loadFile(path)
+    baseHandleFileSelect(path)
+    setMobileMenuOpen(false)
   }
 
-  // 处理标签点击
   const handleTagClick = (tag: string) => {
-    setTagsModalTab('tags')
-    setTagsModalSelected(tag)
-    setTagsModalOpen(true)
+    openTagsModal('tags', tag)
   }
 
-  // 处理分类点击
   const handleCategoryClick = (category: string) => {
-    setTagsModalTab('categories')
-    setTagsModalSelected(category)
-    setTagsModalOpen(true)
+    openTagsModal('categories', category)
   }
 
   return (
-    <div className={`h-screen flex flex-col ${theme}`}>
+    <div className="h-screen flex flex-col">
       {/* Header */}
       <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-card flex-shrink-0">
         {/* Left: Menu button (mobile) + Logo */}
@@ -153,7 +78,7 @@ function App() {
         
         {/* Center: Navigation Menu */}
         <div className="flex-1 flex justify-center">
-          <NavigationMenu 
+          <NavigationMenuWrapper
             items={menuItems}
             onFileSelect={handleFileSelect}
             onTagSelect={handleTagClick}
@@ -186,7 +111,7 @@ function App() {
             </Button>
           )}
           
-          {/* Tags button - always show if there are any tags or categories in the system */}
+          {/* Tags button */}
           {(Object.keys(allTags).length > 0 || Object.keys(allCategories).length > 0) && (
             <Button
               variant="ghost"
@@ -198,7 +123,7 @@ function App() {
             </Button>
           )}
           
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          <ThemeToggle />
         </div>
       </header>
       
@@ -212,12 +137,11 @@ function App() {
               onSelect={handleFileSelect}
               selectedPath={currentFile}
             />
-            {/* 右边缘中间的收起按钮 */}
             <button 
               className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 
-                         w-5 h-12 flex items-center justify-center
+                         w-4 h-11 flex items-center justify-center
                          bg-card border border-border rounded-r-md shadow-sm
-                         hover:bg-accent hover:w-6 transition-all cursor-pointer"
+                         opacity-60 hover:opacity-100 hover:bg-accent hover:w-5 transition-all cursor-pointer"
               onClick={() => setSidebarCollapsed(true)}
               title="收起文件列表"
             >
@@ -225,12 +149,11 @@ function App() {
             </button>
           </aside>
         ) : (
-          /* 收起状态：左边缘展开按钮 */
           <button 
             className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 z-10
-                       w-5 h-12 items-center justify-center
+                       w-4 h-11 items-center justify-center
                        bg-card border border-border rounded-r-md shadow-sm
-                       hover:bg-accent hover:w-6 transition-all cursor-pointer"
+                       opacity-60 hover:opacity-100 hover:bg-accent hover:w-5 transition-all cursor-pointer"
             onClick={() => setSidebarCollapsed(false)}
             title="展开文件列表"
           >
@@ -253,7 +176,7 @@ function App() {
                 onTagClick={handleTagClick}
                 onCategoryClick={handleCategoryClick}
               />
-              <MarkdownViewer content={content} />
+              <MarkdownViewer content={content} onOutlineChange={handleOutlineChange} />
             </>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -269,12 +192,11 @@ function App() {
               <Outline 
                 items={outline} 
               />
-              {/* 左边缘中间的收起按钮 */}
               <button 
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 
-                           w-5 h-12 flex items-center justify-center
+                           w-4 h-11 flex items-center justify-center
                            bg-card border border-border rounded-l-md shadow-sm
-                           hover:bg-accent hover:w-6 transition-all cursor-pointer"
+                           opacity-60 hover:opacity-100 hover:bg-accent hover:w-5 transition-all cursor-pointer"
                 onClick={() => setOutlineCollapsed(true)}
                 title="收起目录"
               >
@@ -282,12 +204,11 @@ function App() {
               </button>
             </aside>
           ) : (
-            /* 收起状态：右边缘展开按钮 */
             <button 
               className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-10
-                         w-5 h-12 items-center justify-center
+                         w-4 h-11 items-center justify-center
                          bg-card border border-border rounded-l-md shadow-sm
-                         hover:bg-accent hover:w-6 transition-all cursor-pointer"
+                         opacity-60 hover:opacity-100 hover:bg-accent hover:w-5 transition-all cursor-pointer"
               onClick={() => setOutlineCollapsed(false)}
               title="展开目录"
             >
@@ -343,6 +264,16 @@ function App() {
         onFileSelect={handleFileSelect}
       />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <FileProvider>
+      <UIProvider>
+        <AppContent />
+      </UIProvider>
+    </FileProvider>
   )
 }
 
