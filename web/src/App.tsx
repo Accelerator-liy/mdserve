@@ -1,4 +1,4 @@
-import { Menu, List, ChevronLeft, ChevronRight, Tags, Search, Maximize2, Minimize2 } from 'lucide-react'
+import { Menu, List, ChevronLeft, ChevronRight, Tags, Search, Maximize2, Minimize2, Download } from 'lucide-react'
 import { FileTree } from './components/FileTree'
 import { MarkdownViewer } from './components/MarkdownViewer'
 import { Outline } from './components/Outline'
@@ -200,12 +200,30 @@ function AppContent() {
     openTagsModal('categories', category)
   }
 
+  const handleDownload = () => {
+    if (!content || !currentFile) return
+
+    // 获取文件名
+    const fileName = currentFile.split('/').pop() || 'document.md'
+
+    // 创建 Blob 并下载
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   const hasDocumentInfo = Boolean(currentFile) || tags.length > 0 || categories.length > 0
 
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="h-12 mx-4 mt-2 mb-2 flex items-center justify-between px-3 rounded-xl border border-border/70 bg-card/70 backdrop-blur-sm shadow-sm flex-shrink-0">
+      <header className="relative z-40 h-12 mx-4 mt-2 mb-2 flex items-center justify-between px-3 rounded-xl border border-border/70 bg-card/70 backdrop-blur-sm shadow-sm flex-shrink-0">
         {/* Left: Menu button (mobile) + Logo */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button
@@ -261,7 +279,7 @@ function AppContent() {
               variant="ghost"
               size="icon"
               onClick={() => setTagsModalOpen(true)}
-              title="查看标签和分类"
+              title="查看分类和标签"
             >
               <Tags className="h-4 w-4" />
             </Button>
@@ -337,16 +355,26 @@ function AppContent() {
                   {/* Meta header — 放在滚动容器外，不受滚动条占位影响，始终撑满卡片宽度 */}
                   {hasDocumentInfo && (
                     <div className="relative bg-point-soft py-2 px-4 border-b border-border/70 flex-shrink-0">
-                      <button
-                        onClick={() => setDocumentFullscreen(true)}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 z-10
-                                   p-1 rounded-md bg-background/70 backdrop-blur-sm
-                                   border border-border/60 hover:bg-accent hover:text-accent-foreground
-                                   opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
-                        title="全屏"
-                      >
-                        <Maximize2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="absolute top-1/2 right-3 -translate-y-1/2 z-10 flex items-center gap-1">
+                        <button
+                          onClick={handleDownload}
+                          className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                     border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                     opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                          title="下载文档"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDocumentFullscreen(true)}
+                          className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                     border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                     opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                          title="全屏"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
 
                       <DocumentInfo
                         path={currentFile}
@@ -366,19 +394,34 @@ function AppContent() {
                     <div ref={contentTopRef} />
 
                     {!hasDocumentInfo && (
-                      <button
-                        onClick={() => setDocumentFullscreen(true)}
-                        className="absolute top-3 right-3 z-10
-                                   p-1 rounded-md bg-background/70 backdrop-blur-sm
-                                   border border-border/60 hover:bg-accent hover:text-accent-foreground
-                                   opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
-                        title="全屏"
-                      >
-                        <Maximize2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+                        <button
+                          onClick={handleDownload}
+                          className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                     border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                     opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                          title="下载文档"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDocumentFullscreen(true)}
+                          className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                     border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                     opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                          title="全屏"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     )}
 
-                    <MarkdownViewer content={content} onOutlineChange={handleOutlineChange} />
+                    <MarkdownViewer
+                      content={content}
+                      currentFile={currentFile}
+                      onNavigateToFile={handleFileSelect}
+                      onOutlineChange={handleOutlineChange}
+                    />
                   </div>
                 </div>
               )}
@@ -485,16 +528,26 @@ function AppContent() {
               {/* Meta header — 放在滚动容器外，不受滚动条占位影响，始终撑满卡片宽度 */}
               {hasDocumentInfo && (
                 <div className="relative bg-point-soft py-2 px-4 border-b border-border/70 flex-shrink-0">
-                  <button
-                    onClick={() => setDocumentFullscreen(false)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 z-10
-                               p-1 rounded-md bg-background/70 backdrop-blur-sm
-                               border border-border/60 hover:bg-accent hover:text-accent-foreground
-                               opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
-                    title="退出全屏 (Esc)"
-                  >
-                    <Minimize2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="absolute top-1/2 right-3 -translate-y-1/2 z-10 flex items-center gap-1">
+                    <button
+                      onClick={handleDownload}
+                      className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                 border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                 opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                      title="下载文档"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDocumentFullscreen(false)}
+                      className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                 border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                 opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                      title="退出全屏 (Esc)"
+                    >
+                      <Minimize2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
 
                   <DocumentInfo
                     path={currentFile}
@@ -511,21 +564,36 @@ function AppContent() {
                 className={`flex-1 min-h-0 overflow-y-auto px-4 pb-4 ${hasDocumentInfo ? 'pt-4' : 'pt-0'} relative mdserve-scrollbar-hidden`}
               >
                 {!hasDocumentInfo && (
-                  <button
-                    onClick={() => setDocumentFullscreen(false)}
-                    className="absolute top-3 right-3 z-10
-                               p-1 rounded-md bg-background/70 backdrop-blur-sm
-                               border border-border/60 hover:bg-accent hover:text-accent-foreground
-                               opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
-                    title="退出全屏 (Esc)"
-                  >
-                    <Minimize2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+                    <button
+                      onClick={handleDownload}
+                      className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                 border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                 opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                      title="下载文档"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDocumentFullscreen(false)}
+                      className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                 border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                 opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                      title="退出全屏 (Esc)"
+                    >
+                      <Minimize2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
 
                 <div ref={contentTopRef} />
 
-                <MarkdownViewer content={content} onOutlineChange={handleOutlineChange} />
+                <MarkdownViewer
+                  content={content}
+                  currentFile={currentFile}
+                  onNavigateToFile={handleFileSelect}
+                  onOutlineChange={handleOutlineChange}
+                />
               </div>
             </div>
           </div>
