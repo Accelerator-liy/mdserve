@@ -321,6 +321,7 @@ func (s *Server) handleGetConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"siteName":   s.config.SiteName,
 		"defaultDoc": s.config.DefaultDoc,
+		"footer":     s.config.Footer,
 	})
 }
 

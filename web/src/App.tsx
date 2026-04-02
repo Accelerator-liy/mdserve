@@ -5,6 +5,7 @@ import { Outline } from './components/Outline'
 import { ThemeToggle } from './components/ThemeToggle'
 import { TagsModal } from './components/TagsModal'
 import { DocumentInfo } from './components/DocumentInfo'
+import { Footer } from './components/Footer'
 import { NavigationMenuWrapper } from './components/NavigationMenu'
 import { SearchModal } from './components/SearchModal'
 import { Button } from './components/ui/button'
@@ -25,6 +26,7 @@ function AppContent() {
     allTags,
     allCategories,
     menuItems,
+    footer,
     handleFileSelect: baseHandleFileSelect,
     handleOutlineChange,
   } = useFile()
@@ -491,7 +493,10 @@ function AppContent() {
           </>
         )}
       </main>
-      
+
+      {/* Footer */}
+      <Footer text={footer} />
+
       {/* Mobile Menu Sheet */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-72 min-w-72 flex-shrink-0 p-0">

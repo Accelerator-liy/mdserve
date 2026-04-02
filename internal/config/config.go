@@ -22,6 +22,7 @@ type Config struct {
 type SiteConfig struct {
 	Name       string `yaml:"name"`
 	DefaultDoc string `yaml:"default_doc"`
+	Footer     string `yaml:"footer"`
 }
 
 // ServerConfig holds server-related configuration
@@ -167,6 +168,8 @@ site:
   name: "我的文档站"
   # 默认展示的文档，不配置则默认展示 README.md（忽略大小写）
   default_doc: "README.md"
+  # 页面底部 footer 文本（可选），不配置则不显示 footer
+  footer: ""
 
 # 服务配置
 server:

@@ -23,6 +23,8 @@ type FileContextState = {
   allCategories: Record<string, string[]>
   // 菜单数据
   menuItems: MenuItem[]
+  // Footer 文本
+  footer: string
 }
 
 type FileContextActions = {
@@ -88,7 +90,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const configQuery = useQuery({
     queryKey: ['config'],
-    queryFn: () => fetchJson<{ defaultDoc?: string }>('/api/config'),
+    queryFn: () => fetchJson<{ defaultDoc?: string; footer?: string }>('/api/config'),
     staleTime: Infinity,
   })
 
@@ -193,6 +195,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     allTags: tagsQuery.data?.tags || {},
     allCategories: tagsQuery.data?.categories || {},
     menuItems: menuQuery.data?.menu || [],
+    footer: configQuery.data?.footer || '',
     loadFile,
     handleFileSelect,
     handleOutlineChange,

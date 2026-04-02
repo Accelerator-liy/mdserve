@@ -118,6 +118,7 @@ func runServe(cmd *cobra.Command, args []string) {
 		Port:       cfg.Server.Port,
 		SiteName:   cfg.Site.Name,
 		DefaultDoc: cfg.Site.DefaultDoc,
+		Footer:     cfg.Site.Footer,
 		Menu:       convertMenuItems(cfg.Menu),
 	}
 

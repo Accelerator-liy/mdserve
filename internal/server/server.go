@@ -35,6 +35,7 @@ type Config struct {
 	Port           int
 	SiteName       string
 	DefaultDoc     string
+	Footer         string
 	Menu           []MenuItem
 	IgnorePatterns []string
 }
