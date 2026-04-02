@@ -293,7 +293,7 @@ function AppContent() {
       </header>
       
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden relative gap-4 px-4 pb-4">
+      <main className="flex-1 flex overflow-hidden relative gap-4 px-4 pb-2">
         {/* Desktop Sidebar (FileTree) */}
         {hasSidebarContent && (
           <>

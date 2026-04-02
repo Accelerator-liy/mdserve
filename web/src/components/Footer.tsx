@@ -8,8 +8,9 @@ export function Footer({ text }: FooterProps) {
   }
 
   return (
-    <footer className="flex-shrink-0 text-center text-sm text-muted-foreground py-2 px-4">
-      {text}
-    </footer>
+    <footer
+      className="flex-shrink-0 text-center text-sm text-muted-foreground py-2 px-4"
+      dangerouslySetInnerHTML={{ __html: text }}
+    />
   )
 }
