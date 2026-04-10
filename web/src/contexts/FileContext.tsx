@@ -23,10 +23,12 @@ type FileContextState = {
   allCategories: Record<string, string[]>
   // 菜单数据
   menuItems: MenuItem[]
+  // Footer 文本
+  footer: string
 }
 
 type FileContextActions = {
-  loadFile: (path: string, updateUrl?: boolean) => Promise<void>
+  loadFile: (path: string, updateUrl?: boolean) => void
   handleFileSelect: (path: string) => void
   handleOutlineChange: (outline: OutlineItem[]) => void
   refreshFiles: () => void
@@ -36,6 +38,23 @@ type FileContextValue = FileContextState & FileContextActions
 
 const FileContext = createContext<FileContextValue | null>(null)
 const QUERY_STALE_MS = 30 * 1000
+
+function decodePathParam(rawPath: string | null): string | null {
+  if (!rawPath) return null
+  let next = rawPath
+  // 兼容外部分享时出现的重复编码（例如 %25E5...）
+  for (let i = 0; i < 2; i += 1) {
+    if (!/%[0-9a-fA-F]{2}/.test(next)) break
+    try {
+      const decoded = decodeURIComponent(next)
+      if (decoded === next) break
+      next = decoded
+    } catch {
+      break
+    }
+  }
+  return next
+}
 
 export function FileProvider({ children }: { children: React.ReactNode }) {
   const [outline, setOutline] = useState<OutlineItem[]>([])
@@ -71,33 +90,58 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const configQuery = useQuery({
     queryKey: ['config'],
-    queryFn: () => fetchJson<{ defaultDoc?: string }>('/api/config'),
+    queryFn: () => fetchJson<{ defaultDoc?: string; footer?: string }>('/api/config'),
     staleTime: Infinity,
   })
 
-  const urlPath = searchParams.get('path')
+  const rawUrlPath = searchParams.get('path')
+  const urlPath = decodePathParam(rawUrlPath)
   const defaultDoc = configQuery.data?.defaultDoc || 'README.md'
   const currentFile = urlPath || (configQuery.isSuccess ? defaultDoc : null)
 
   useEffect(() => {
+    if (!rawUrlPath || !urlPath) return
+    if (rawUrlPath === urlPath) return
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.set('path', urlPath)
+      return next
+    }, { replace: true })
+  }, [rawUrlPath, urlPath, setSearchParams])
+
+  useEffect(() => {
     if (!urlPath && configQuery.isSuccess) {
-      const next = new URLSearchParams(searchParams)
-      next.set('path', defaultDoc)
-      setSearchParams(next, { replace: true })
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        next.set('path', defaultDoc)
+        return next
+      }, { replace: true })
     }
-  }, [urlPath, defaultDoc, configQuery.isSuccess, searchParams, setSearchParams])
+  }, [urlPath, defaultDoc, configQuery.isSuccess, setSearchParams])
 
   const fileQuery = useQuery({
     queryKey: ['file', currentFile],
-    queryFn: () => fetchJson<{ content?: string; tags?: string[]; categories?: string[] }>(
+    queryFn: () => fetchJson<{ content?: string; tags?: string[]; categories?: string[]; resolvedPath?: string }>(
       `/api/file?path=${encodeURIComponent(currentFile!)}`
     ),
     enabled: Boolean(currentFile),
     staleTime: 5 * 1000,
-    placeholderData: previousData => previousData,
   })
 
-  const loadFile = useCallback(async (path: string, updateUrl = true) => {
+  // 如果服务端将目录路径解析为 README.md（如 docs/ → docs/README.md），同步更新 URL
+  useEffect(() => {
+    const resolvedPath = fileQuery.data?.resolvedPath
+    if (!resolvedPath || !currentFile) return
+    if (resolvedPath !== currentFile) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        next.set('path', resolvedPath)
+        return next
+      }, { replace: true })
+    }
+  }, [fileQuery.data?.resolvedPath, currentFile, setSearchParams])
+
+  const loadFile = useCallback((path: string, updateUrl = true) => {
     if (!path) return
     setSearchParams(prev => {
       const next = new URLSearchParams(prev)
@@ -151,6 +195,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     allTags: tagsQuery.data?.tags || {},
     allCategories: tagsQuery.data?.categories || {},
     menuItems: menuQuery.data?.menu || [],
+    footer: configQuery.data?.footer || '',
     loadFile,
     handleFileSelect,
     handleOutlineChange,

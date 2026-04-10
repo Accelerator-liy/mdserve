@@ -22,6 +22,7 @@ type Config struct {
 type SiteConfig struct {
 	Name       string `yaml:"name"`
 	DefaultDoc string `yaml:"default_doc"`
+	Footer     string `yaml:"footer"`
 }
 
 // ServerConfig holds server-related configuration
@@ -32,7 +33,8 @@ type ServerConfig struct {
 
 // DocsConfig holds docs-related configuration
 type DocsConfig struct {
-	Path string `yaml:"path"`
+	Path   string   `yaml:"path"`
+	Ignore []string `yaml:"ignore"` // Glob patterns for files/directories to ignore
 }
 
 // GitConfig holds git pull configuration
@@ -166,6 +168,8 @@ site:
   name: "我的文档站"
   # 默认展示的文档，不配置则默认展示 README.md（忽略大小写）
   default_doc: "README.md"
+  # 页面底部 footer 文本（可选），不配置则不显示 footer
+  footer: ""
 
 # 服务配置
 server:
@@ -178,6 +182,13 @@ server:
 docs:
   # 文档根目录
   path: "./docs"
+  # 忽略的文件或目录，支持 glob 通配符
+  # 例如：
+  #   - "draft/**"     忽略 draft 目录下的所有文件
+  #   - "*.tmp.md"     忽略所有 .tmp.md 结尾的文件
+  #   - "**/test/**"   忽略任意路径下的 test 目录
+  #   - "_*"           忽略所有以下划线开头的文件/目录
+  ignore: []
 
 # Git 自动拉取配置（可选）
 git:

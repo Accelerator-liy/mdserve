@@ -1,10 +1,11 @@
-import { Menu, List, ChevronLeft, ChevronRight, Tags, Search, Maximize2, Minimize2, Download } from 'lucide-react'
+import { Menu, List, ChevronLeft, ChevronRight, Tags, Search, Maximize2, Minimize2, Download, FileCode2 } from 'lucide-react'
 import { FileTree } from './components/FileTree'
 import { MarkdownViewer } from './components/MarkdownViewer'
 import { Outline } from './components/Outline'
 import { ThemeToggle } from './components/ThemeToggle'
 import { TagsModal } from './components/TagsModal'
 import { DocumentInfo } from './components/DocumentInfo'
+import { Footer } from './components/Footer'
 import { NavigationMenuWrapper } from './components/NavigationMenu'
 import { SearchModal } from './components/SearchModal'
 import { Button } from './components/ui/button'
@@ -25,6 +26,7 @@ function AppContent() {
     allTags,
     allCategories,
     menuItems,
+    footer,
     handleFileSelect: baseHandleFileSelect,
     handleOutlineChange,
   } = useFile()
@@ -48,11 +50,10 @@ function AppContent() {
   } = useUI()
 
   const [documentFullscreen, setDocumentFullscreen] = useState(false)
+  const [documentSourceVisible, setDocumentSourceVisible] = useState(false)
   const hasSidebarContent = files.length > 0
   const hasOutlineContent = outline.length > 0
 
-  // 内容区滚动到顶部锚点（在 DocumentInfo 之前）
-  const contentTopRef = useRef<HTMLDivElement>(null)
   // 内容区滚动容器：空闲时隐藏滚动条，滚动时显示
   const contentScrollRef = useRef<HTMLDivElement>(null)
   const fullscreenScrollRef = useRef<HTMLDivElement>(null)
@@ -80,8 +81,10 @@ function AppContent() {
 
     pendingTopScrollRef.current = false
 
-    const el = contentTopRef.current
-    if (!el) return
+    const scrollContainer = documentFullscreen
+      ? fullscreenScrollRef.current
+      : contentScrollRef.current
+    if (!scrollContainer) return
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -91,9 +94,9 @@ function AppContent() {
     // 对齐 `MarkdownViewer` 的淡入淡出（120ms）与下一帧，减少“滚动中闪烁”的观感
     const timer = window.setTimeout(() => {
       window.requestAnimationFrame(() => {
-        el.scrollIntoView({
+        scrollContainer.scrollTo({
+          top: 0,
           behavior: prefersReducedMotion ? 'auto' : 'smooth',
-          block: 'start',
         })
       })
     }, 130)
@@ -290,7 +293,7 @@ function AppContent() {
       </header>
       
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden relative gap-4 px-4 pb-4">
+      <main className="flex-1 flex overflow-hidden relative gap-4 px-4 pb-2">
         {/* Desktop Sidebar (FileTree) */}
         {hasSidebarContent && (
           <>
@@ -357,6 +360,15 @@ function AppContent() {
                     <div className="relative bg-point-soft py-2 px-4 border-b border-border/70 flex-shrink-0">
                       <div className="absolute top-1/2 right-3 -translate-y-1/2 z-10 flex items-center gap-1">
                         <button
+                          onClick={() => setDocumentSourceVisible(prev => !prev)}
+                          className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                     border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                     opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                          title={documentSourceVisible ? '查看渲染' : '查看源码'}
+                        >
+                          <FileCode2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
                           onClick={handleDownload}
                           className="p-1 rounded-md bg-background/70 backdrop-blur-sm
                                      border border-border/60 hover:bg-accent hover:text-accent-foreground
@@ -391,10 +403,17 @@ function AppContent() {
                     ref={contentScrollRef}
                     className={`flex-1 min-h-0 overflow-y-auto px-4 pb-4 ${hasDocumentInfo ? 'pt-4' : 'pt-0'} relative mdserve-scrollbar-hidden`}
                   >
-                    <div ref={contentTopRef} />
-
                     {!hasDocumentInfo && (
                       <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+                        <button
+                          onClick={() => setDocumentSourceVisible(prev => !prev)}
+                          className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                     border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                     opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                          title={documentSourceVisible ? '查看渲染' : '查看源码'}
+                        >
+                          <FileCode2 className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           onClick={handleDownload}
                           className="p-1 rounded-md bg-background/70 backdrop-blur-sm
@@ -419,6 +438,7 @@ function AppContent() {
                     <MarkdownViewer
                       content={content}
                       currentFile={currentFile}
+                      showSource={documentSourceVisible}
                       onNavigateToFile={handleFileSelect}
                       onOutlineChange={handleOutlineChange}
                     />
@@ -473,7 +493,10 @@ function AppContent() {
           </>
         )}
       </main>
-      
+
+      {/* Footer */}
+      <Footer text={footer} />
+
       {/* Mobile Menu Sheet */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-72 min-w-72 flex-shrink-0 p-0">
@@ -530,6 +553,15 @@ function AppContent() {
                 <div className="relative bg-point-soft py-2 px-4 border-b border-border/70 flex-shrink-0">
                   <div className="absolute top-1/2 right-3 -translate-y-1/2 z-10 flex items-center gap-1">
                     <button
+                      onClick={() => setDocumentSourceVisible(prev => !prev)}
+                      className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                 border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                 opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                      title={documentSourceVisible ? '查看渲染' : '查看源码'}
+                    >
+                      <FileCode2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
                       onClick={handleDownload}
                       className="p-1 rounded-md bg-background/70 backdrop-blur-sm
                                  border border-border/60 hover:bg-accent hover:text-accent-foreground
@@ -566,6 +598,15 @@ function AppContent() {
                 {!hasDocumentInfo && (
                   <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
                     <button
+                      onClick={() => setDocumentSourceVisible(prev => !prev)}
+                      className="p-1 rounded-md bg-background/70 backdrop-blur-sm
+                                 border border-border/60 hover:bg-accent hover:text-accent-foreground
+                                 opacity-60 hover:opacity-100 transition-opacity transition-colors cursor-pointer"
+                      title={documentSourceVisible ? '查看渲染' : '查看源码'}
+                    >
+                      <FileCode2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
                       onClick={handleDownload}
                       className="p-1 rounded-md bg-background/70 backdrop-blur-sm
                                  border border-border/60 hover:bg-accent hover:text-accent-foreground
@@ -586,11 +627,10 @@ function AppContent() {
                   </div>
                 )}
 
-                <div ref={contentTopRef} />
-
                 <MarkdownViewer
                   content={content}
                   currentFile={currentFile}
+                  showSource={documentSourceVisible}
                   onNavigateToFile={handleFileSelect}
                   onOutlineChange={handleOutlineChange}
                 />

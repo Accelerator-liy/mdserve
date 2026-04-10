@@ -79,6 +79,35 @@ func (s *Server) handleGetFile(c *gin.Context) {
 		return
 	}
 
+	// Check if file is ignored
+	if s.ignoreMatcher.ShouldIgnoreFile(relPath) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+		return
+	}
+
+	// If path is a directory, look for README.md (case-insensitive)
+	info, err := os.Stat(fullPath)
+	if err == nil && info.IsDir() {
+		entries, readErr := os.ReadDir(fullPath)
+		if readErr != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "directory not readable"})
+			return
+		}
+		found := false
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.EqualFold(entry.Name(), "readme.md") {
+				relPath = path.Join(relPath, entry.Name())
+				fullPath = filepath.Join(fullPath, entry.Name())
+				found = true
+				break
+			}
+		}
+		if !found {
+			c.JSON(http.StatusNotFound, gin.H{"error": "no README.md found in directory"})
+			return
+		}
+	}
+
 	// Read file
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -95,8 +124,9 @@ func (s *Server) handleGetFile(c *gin.Context) {
 	outline := markdown.ExtractOutline(cleanContent)
 
 	response := gin.H{
-		"content": cleanContent,
-		"outline": outline,
+		"content":      cleanContent,
+		"outline":      outline,
+		"resolvedPath": relPath,
 	}
 
 	// Add frontmatter data if exists
@@ -128,6 +158,12 @@ func (s *Server) handleGetAsset(c *gin.Context) {
 		return
 	}
 
+	// Check if asset is ignored
+	if s.ignoreMatcher.ShouldIgnoreFile(relPath) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "asset not found"})
+		return
+	}
+
 	info, err := os.Stat(fullPath)
 	if err != nil || info.IsDir() {
 		c.JSON(http.StatusNotFound, gin.H{"error": "asset not found"})
@@ -156,7 +192,23 @@ func (s *Server) handleSearch(c *gin.Context) {
 
 	// Walk through all markdown files
 	err := filepath.Walk(s.rootPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			return nil
+		}
+
+		// Get relative path for ignore checking
+		relPath, _ := filepath.Rel(s.rootPath, path)
+
+		// Skip ignored directories
+		if info.IsDir() {
+			if s.ignoreMatcher.ShouldIgnoreDir(relPath) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Skip ignored files
+		if s.ignoreMatcher.ShouldIgnoreFile(relPath) {
 			return nil
 		}
 
@@ -179,7 +231,6 @@ func (s *Server) handleSearch(c *gin.Context) {
 		contentStr := string(content)
 
 		var matches []string
-		relPath, _ := filepath.Rel(s.rootPath, path)
 
 		// Check filename
 		if strings.Contains(strings.ToLower(info.Name()), query) {
@@ -270,6 +321,7 @@ func (s *Server) handleGetConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"siteName":   s.config.SiteName,
 		"defaultDoc": s.config.DefaultDoc,
+		"footer":     s.config.Footer,
 	})
 }
 
