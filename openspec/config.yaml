@@ -1,0 +1,19 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+
+context: |
+  mdserve 一个实时 Markdown 文件服务器，提供 Web 界面浏览和渲染 Markdown 文件。
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+rules:
+  proposal:
+    - Keep proposals under 500 words
+    - Always include a "Non-goals" section
+    - 优先使用中文
+  tasks:
+    - Break tasks into chunks of max 2 hours
+    - 优先使用中文
