@@ -39,6 +39,7 @@ make build
 
 ```bash
 mdserve serve /path/to/markdown/files
+mdserve serve /Users/mobvista/CodeupProjects/ad-system-notes
 ```
 
 启动后访问 http://localhost:3000
